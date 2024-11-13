@@ -1,101 +1,157 @@
-import Image from "next/image";
+"use client";
+import { Calendar } from "@/components/ui/calendar";
+import { useSession, signIn, signOut } from "next-auth/react";
+import React, { useState } from "react";
+import "react-datepicker/dist/react-datepicker.css";
+import { ToastContainer, toast } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
 
-export default function Home() {
+export default function CalendarComponent() {
+  const { data: session } = useSession();
+  const [selectedTime, setSelectedTime] = useState("09:00");
+  const [eventName, setEventName] = useState("");
+  const [date, setDate] = useState<Date | undefined>(new Date());
+  const [isLoading, setIsLoading] = useState(false);
+
+  const createEvent = async () => {
+    if (!session?.accessToken) {
+      toast.error("Please log in to create an event.");
+      return;
+    }
+
+    if (!eventName) {
+      toast.error("Please enter a name for the event.");
+      return;
+    }
+
+    setIsLoading(true);
+    const startTime = new Date(date);
+    const [hours, minutes] = selectedTime.split(":");
+    startTime.setHours(hours);
+    startTime.setMinutes(minutes);
+
+    const endTime = new Date(startTime);
+    endTime.setHours(startTime.getHours() + 1);
+
+    try {
+      const response = await fetch("https://www.googleapis.com/calendar/v3/calendars/primary/events", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${session.accessToken}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          summary: eventName,
+          description: "Event created from the app.",
+          start: {
+            dateTime: startTime.toISOString(),
+            timeZone: "Asia/Kolkata",
+          },
+          end: {
+            dateTime: endTime.toISOString(),
+            timeZone: "Asia/Kolkata",
+          },
+        }),
+      });
+
+      if (response.ok) {
+        toast.success("Event created successfully!");
+        setEventName("");
+        setDate(new Date());
+        setSelectedTime("09:00");
+      } else {
+        const errorData = await response.json();
+        console.error("Error creating event:", errorData);
+        toast.error("Failed to create event.");
+      }
+    } catch (error) {
+      console.error("Error creating event:", error);
+      toast.error("An error occurred while creating the event.");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleDateSelect = (selectedDate: any) => {
+    const today = new Date();
+    if (selectedDate >= today.setHours(0, 0, 0, 0)) {
+      setDate(selectedDate);
+    }
+  };
+
+  const today = new Date();
+  const todayDate = today.toISOString().split('T')[0];
+
   return (
-    <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
-      <main className="flex flex-col gap-8 row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="list-inside list-decimal text-sm text-center sm:text-left font-[family-name:var(--font-geist-mono)]">
-          <li className="mb-2">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] px-1 py-0.5 rounded font-semibold">
-              src/app/page.tsx
-            </code>
-            .
-          </li>
-          <li>Save and see your changes instantly.</li>
-        </ol>
+    <div className="max-w-lg mx-auto p-8 bg-gradient-to-br from-white to-gray-100 rounded-lg shadow-lg font-sans text-gray-800 relative">
+      <ToastContainer />
+      {session ? (
+        <>
+          <div className="flex justify-between items-center mb-6">
+            <p className="text-lg font-semibold">Signed in as {session?.user?.name}</p>
+            <button
+              onClick={() => signOut()}
+              className="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600 transition duration-200">
+              Sign out
+            </button>
+          </div>
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:min-w-44"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
+          <div>
+            <h3 className="text-2xl font-bold mb-4">Create a New Event</h3>
+
+            <div className="mb-4">
+              <label className="block text-sm font-medium mb-1">Event Name:</label>
+              <input
+                type="text"
+                value={eventName}
+                onChange={(e) => setEventName(e.target.value)}
+                placeholder="Enter event name"
+                className="w-full px-4 py-2 border border-gray-300 rounded focus:outline-none focus:border-blue-500"
+              />
+            </div>
+
+            <div className="mb-4 ">
+              <label className="block text-sm font-medium mb-1">Select Date:</label>
+              <Calendar
+                mode="single"
+                fromDate={new Date(todayDate)}
+                selected={date}
+                onSelect={handleDateSelect}
+                className="rounded-md border border-gray-300 flex justify-center w-full"
+              />
+            </div>
+
+            <div className="mb-6">
+              <label className="block text-sm font-medium mb-1">Select Time:</label>
+              <input
+                type="time"
+                value={selectedTime}
+                onChange={(e) => setSelectedTime(e.target.value)}
+                className="w-full px-4 py-2 border border-gray-300 rounded focus:outline-none focus:border-blue-500"
+              />
+            </div>
+
+            <button
+              onClick={createEvent}
+              disabled={isLoading}
+              className={`w-full py-2 rounded transition duration-200 ${
+                isLoading ? "bg-gray-400" : "bg-blue-600 hover:bg-blue-700"
+              } text-white`}
+            >
+              {isLoading ? "Creating Event..." : "Create Event in Google Calendar"}
+            </button>
+          </div>
+        </>
+      ) : (
+        <div className="text-center">
+          <p className="text-lg mb-4">Please sign in to create an event</p>
+          <button
+            onClick={() => signIn("google")}
+            className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 transition duration-200">
+            Sign in with Google
+          </button>
         </div>
-      </main>
-      <footer className="row-start-3 flex gap-6 flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
+      )}
     </div>
   );
 }
