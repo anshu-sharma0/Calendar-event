@@ -1,16 +1,47 @@
-"use client";
+'use client'
+import React, { useState } from "react";
 import { Calendar } from "@/components/ui/calendar";
 import { useSession, signIn, signOut } from "next-auth/react";
-import React, { useState } from "react";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+
+const TIMEZONE_OPTIONS = [
+  { value: 'Asia/Kolkata', label: 'India (IST)' },
+  { value: 'America/New_York', label: 'New York (EST/EDT)' },
+  { value: 'America/Los_Angeles', label: 'Los Angeles (PST/PDT)' },
+  { value: 'Europe/London', label: 'London (GMT/BST)' },
+  { value: 'Asia/Tokyo', label: 'Tokyo (JST)' },
+  { value: 'Australia/Sydney', label: 'Sydney (AEST)' },
+  { value: 'Europe/Paris', label: 'Paris (CET/CEST)' },
+  { value: 'Asia/Dubai', label: 'Dubai (GST)' },
+  { value: 'Asia/Singapore', label: 'Singapore (SGT)' }
+];
 
 export default function CalendarComponent() {
-  const { data: session } = useSession(); // session is typed with the extended type
+  const { data: session } = useSession(); 
   const [selectedTime, setSelectedTime] = useState("09:00");
   const [eventName, setEventName] = useState("");
-  const [date, setDate] = useState<Date | any>(new Date());
+  const [date, setDate] = useState<Date | undefined>(new Date());
   const [isLoading, setIsLoading] = useState(false);
+  const [selectedTimezone, setSelectedTimezone] = useState("Asia/Kolkata");
+
+  // Convert time from local timezone to target timezone
+  const convertToTargetTimezone = (localDate: Date, localTime: string, targetTimezone: string) => {
+    // Create date object with selected date and time
+    const [hours, minutes] = localTime.split(":");
+    const localDateTime = new Date(localDate);
+    localDateTime.setHours(parseInt(hours), parseInt(minutes), 0, 0);
+
+    // Get the target timezone offset
+    const targetDate = new Date(localDateTime.toLocaleString('en-US', { timeZone: targetTimezone }));
+    const targetOffset = targetDate.getTime() - localDateTime.getTime();
+
+    // Create the final date in target timezone
+    const finalDate = new Date(localDateTime.getTime() + targetOffset);
+    
+    return finalDate;
+  };
 
   const createEvent = async () => {
     if (!session?.accessToken) {
@@ -23,16 +54,40 @@ export default function CalendarComponent() {
       return;
     }
 
-    setIsLoading(true);
-    const startTime = new Date(date);
-    const [hours, minutes] = selectedTime.split(":");
-    startTime.setHours(Number(hours));
-    startTime.setMinutes(Number(minutes));
+    if (!date) {
+      toast.error("Please select a date.");
+      return;
+    }
 
-    const endTime = new Date(startTime);
-    endTime.setHours(startTime.getHours() + 1);
+    setIsLoading(true);
 
     try {
+      // Convert the selected local time to the target timezone
+      const startDateTime = convertToTargetTimezone(date, selectedTime, selectedTimezone);
+      
+      // Create end time (1 hour after start time)
+      const endDateTime = new Date(startDateTime.getTime() + 60 * 60 * 1000);
+
+      // Format times in ISO string with the correct timezone
+      const timeZoneFormatter = new Intl.DateTimeFormat('en-US', {
+        timeZone: selectedTimezone,
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+        hour12: false,
+        timeZoneName: 'short'
+      });
+
+      // Get the formatted strings
+      const startTimeStr = startDateTime.toISOString();
+      const endTimeStr = endDateTime.toISOString();
+
+      // Current timezone for display
+      const timeZoneDisplay = timeZoneFormatter.format(startDateTime);
+
       const response = await fetch("https://www.googleapis.com/calendar/v3/calendars/primary/events", {
         method: "POST",
         headers: {
@@ -41,20 +96,20 @@ export default function CalendarComponent() {
         },
         body: JSON.stringify({
           summary: eventName,
-          description: "Event created from the app.",
+          description: `Event created in ${timeZoneDisplay}`,
           start: {
-            dateTime: startTime.toISOString(),
-            timeZone: "Asia/Kolkata",
+            dateTime: startTimeStr,
+            timeZone: selectedTimezone,
           },
           end: {
-            dateTime: endTime.toISOString(),
-            timeZone: "Asia/Kolkata",
+            dateTime: endTimeStr,
+            timeZone: selectedTimezone,
           },
         }),
       });
 
       if (response.ok) {
-        toast.success("Event created successfully!");
+        toast.success(`Event created successfully in ${TIMEZONE_OPTIONS.find(tz => tz.value === selectedTimezone)?.label}!`);
         setEventName("");
         setDate(new Date());
         setSelectedTime("09:00");
@@ -71,9 +126,9 @@ export default function CalendarComponent() {
     }
   };
 
-  const handleDateSelect = (selectedDate: any) => {
+  const handleDateSelect = (selectedDate: Date | undefined) => {
     const today = new Date();
-    if (selectedDate >= today.setHours(0, 0, 0, 0)) {
+    if (selectedDate && selectedDate >= today.setHours(0, 0, 0, 0)) {
       setDate(selectedDate);
     }
   };
@@ -109,7 +164,29 @@ export default function CalendarComponent() {
               />
             </div>
 
-            <div className="mb-4 ">
+            <div className="mb-4">
+              <label className="block text-sm font-medium mb-1">Timezone:</label>
+              <Select
+                value={selectedTimezone}
+                onValueChange={(value) => setSelectedTimezone(value)}
+              >
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Select timezone" />
+                </SelectTrigger>
+                <SelectContent>
+                  {TIMEZONE_OPTIONS.map((timezone) => (
+                    <SelectItem key={timezone.value} value={timezone.value}>
+                      {timezone.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-sm text-gray-500 mt-1">
+                Current timezone: {new Intl.DateTimeFormat('en-US', { timeZoneName: 'long' }).format(new Date())}
+              </p>
+            </div>
+
+            <div className="mb-4">
               <label className="block text-sm font-medium mb-1">Select Date:</label>
               <Calendar
                 mode="single"
@@ -121,7 +198,7 @@ export default function CalendarComponent() {
             </div>
 
             <div className="mb-6">
-              <label className="block text-sm font-medium mb-1">Select Time:</label>
+              <label className="block text-sm font-medium mb-1">Select Time ({selectedTimezone}):</label>
               <input
                 type="time"
                 value={selectedTime}
