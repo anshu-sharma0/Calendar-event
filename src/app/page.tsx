@@ -2,15 +2,14 @@
 import { Calendar } from "@/components/ui/calendar";
 import { useSession, signIn, signOut } from "next-auth/react";
 import React, { useState } from "react";
-import "react-datepicker/dist/react-datepicker.css";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 
 export default function CalendarComponent() {
-  const { data: session } = useSession();
+  const { data: session } = useSession(); // session is typed with the extended type
   const [selectedTime, setSelectedTime] = useState("09:00");
   const [eventName, setEventName] = useState("");
-  const [date, setDate] = useState<Date | undefined>(new Date());
+  const [date, setDate] = useState<Date | any>(new Date());
   const [isLoading, setIsLoading] = useState(false);
 
   const createEvent = async () => {
@@ -27,8 +26,8 @@ export default function CalendarComponent() {
     setIsLoading(true);
     const startTime = new Date(date);
     const [hours, minutes] = selectedTime.split(":");
-    startTime.setHours(hours);
-    startTime.setMinutes(minutes);
+    startTime.setHours(Number(hours));
+    startTime.setMinutes(Number(minutes));
 
     const endTime = new Date(startTime);
     endTime.setHours(startTime.getHours() + 1);
