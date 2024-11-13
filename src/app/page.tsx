@@ -7,15 +7,25 @@ import "react-toastify/dist/ReactToastify.css";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 const TIMEZONE_OPTIONS = [
-  { value: 'Asia/Kolkata', label: 'India (IST)' },
-  { value: 'America/New_York', label: 'New York (EST/EDT)' },
-  { value: 'America/Los_Angeles', label: 'Los Angeles (PST/PDT)' },
-  { value: 'Europe/London', label: 'London (GMT/BST)' },
-  { value: 'Asia/Tokyo', label: 'Tokyo (JST)' },
-  { value: 'Australia/Sydney', label: 'Sydney (AEST)' },
-  { value: 'Europe/Paris', label: 'Paris (CET/CEST)' },
+  { value: 'America/Adak', label: 'Adak (HST/HDST)' },
+  { value: 'America/Anchorage', label: 'Anchorage (AKST/AKDT)' },
+  { value: 'Pacific/Auckland', label: 'Auckland (NZST/NZDT)' },
+  { value: 'Asia/Bangkok', label: 'Bangkok (ICT)' },
+  { value: 'Europe/Berlin', label: 'Berlin (CET/CEST)' },
+  { value: 'America/Chicago', label: 'Chicago (CST/CDT)' },
+  { value: 'America/Denver', label: 'Denver (MST/MDT)' },
   { value: 'Asia/Dubai', label: 'Dubai (GST)' },
-  { value: 'Asia/Singapore', label: 'Singapore (SGT)' }
+  { value: 'Asia/Kolkata', label: 'India (IST)' },
+  { value: 'Europe/London', label: 'London (GMT/BST)' },
+  { value: 'America/Los_Angeles', label: 'Los Angeles (PST/PDT)' },
+  { value: 'Europe/Moscow', label: 'Moscow (MSK/MSD)' },
+  { value: 'Pacific/Midway', label: 'Midway Island (SST)' },
+  { value: 'America/New_York', label: 'New York (EST/EDT)' },
+  { value: 'Atlantic/Reykjavik', label: 'Reykjavik (GMT)' },
+  { value: 'America/Sao_Paulo', label: 'São Paulo (BRT)' },
+  { value: 'Asia/Singapore', label: 'Singapore (SGT)' },
+  { value: 'Australia/Sydney', label: 'Sydney (AEST/AEDT)' },
+  { value: 'Asia/Tokyo', label: 'Tokyo (JST)' },
 ];
 
 export default function CalendarComponent() {
